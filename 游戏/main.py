@@ -1,4 +1,3 @@
-# main.py
 import pygame
 import os
 import random
@@ -149,7 +148,8 @@ def main():
                         player.rect.top < enemy.rect.bottom):
                     if player.hit():
                         if player.health <= 0:
-                            game_over = True
+                            player.die()  # 调用玩家的死亡方法
+                            game_over = True  # 设置游戏结束状态
 
             # 敌人生成（保持原代码不变）
             if current_time - enemy_spawn_timer > ENEMY_SPAWN_DELAY:
@@ -230,4 +230,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

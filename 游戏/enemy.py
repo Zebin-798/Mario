@@ -1,4 +1,5 @@
 import pygame
+import os
 from constants import CHARACTER_SCALE, GRAVITY
 
 
@@ -12,28 +13,78 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = "left"
         self.on_ground = False
         self.velocity_y = 0
-        self.create_enemy_sprite()
+
+        # 动画相关变量
+        self.animation_frame = 0
+        self.animation_speed = 8
+        self.current_sprite = None
+        self.stomped = False  # 新增被踩状态
+
+        # 加载精灵图片
+        self.load_sprites()
 
         # 用于追踪连续碰撞，避免无限循环
         self.consecutive_collisions = 0
 
-    def create_enemy_sprite(self):
-        self.sprite = pygame.Surface((self.width * CHARACTER_SCALE, self.height * CHARACTER_SCALE), pygame.SRCALPHA)
-        pygame.draw.rect(self.sprite, (255, 0, 0),
-                         (0, 0, self.width * CHARACTER_SCALE, self.height * CHARACTER_SCALE))
+    def load_sprites(self):
+        """加载并切割蘑菇怪图片为三个动作"""
+        try:
+            # 尝试加载图片
+            image_path = os.path.join("assets", "Enemies", "Goombas.png")
+            self.sprite_sheet = pygame.image.load(image_path).convert_alpha()
 
-        eye_size = int(3 * CHARACTER_SCALE)
-        eye_y = int(5 * CHARACTER_SCALE)
+            # 获取精灵表实际尺寸
+            sheet_width, sheet_height = self.sprite_sheet.get_size()
 
-        if self.direction == "left":
-            pygame.draw.circle(self.sprite, (255, 255, 255),
-                               (eye_size + 2, eye_y), eye_size)
-        else:
-            pygame.draw.circle(self.sprite, (255, 255, 255),
-                               (self.width * CHARACTER_SCALE - eye_size - 2, eye_y), eye_size)
+            # 计算实际精灵尺寸（考虑缩放）
+            actual_width = self.width * CHARACTER_SCALE
+            actual_height = self.height * CHARACTER_SCALE
+
+            # 切割图片为三个动作帧（假设图片是水平排列的三个相同大小的帧）
+            frame_width = sheet_width // 3
+            frame_height = sheet_height
+
+            # 向右走（第一帧）
+            walk_right_frame = self.sprite_sheet.subsurface(pygame.Rect(0, 0, frame_width, frame_height))
+            self.walk_right = pygame.transform.scale(walk_right_frame, (actual_width, actual_height))
+
+            # 向左走（第二帧）
+            walk_left_frame = self.sprite_sheet.subsurface(pygame.Rect(frame_width, 0, frame_width, frame_height))
+            self.walk_left = pygame.transform.scale(walk_left_frame, (actual_width, actual_height))
+
+            # 被踩扁（第三帧）
+            stomped_frame = self.sprite_sheet.subsurface(pygame.Rect(frame_width * 2, 0, frame_width, frame_height))
+            self.stomped_sprite = pygame.transform.scale(stomped_frame, (actual_width, actual_height))
+
+            self.current_sprite = self.walk_left  # 默认向左走
+            print(f"敌人精灵加载成功: {image_path}")
+        except Exception as e:
+            # 加载失败时创建默认方块
+            print(f"警告: 加载敌人图片失败: {e}")
+            self.create_default_sprites()
+
+    def create_default_sprites(self):
+        """创建默认的纯色精灵，用于图片加载失败时"""
+        actual_width = self.width * CHARACTER_SCALE
+        actual_height = self.height * CHARACTER_SCALE
+
+        # 向右走（绿色）
+        self.walk_right = pygame.Surface((actual_width, actual_height), pygame.SRCALPHA)
+        self.walk_right.fill((0, 128, 0))
+
+        # 向左走（深绿色）
+        self.walk_left = pygame.Surface((actual_width, actual_height), pygame.SRCALPHA)
+        self.walk_left.fill((0, 64, 0))
+
+        # 被踩扁（暗红色）
+        self.stomped_sprite = pygame.Surface((actual_width, actual_height), pygame.SRCALPHA)
+        self.stomped_sprite.fill((128, 0, 0))
+
+        self.current_sprite = self.walk_left
 
     def draw(self, screen):
-        screen.blit(self.sprite, (self.rect.x, self.rect.y))
+        if self.current_sprite:
+            screen.blit(self.current_sprite, (self.rect.x, self.rect.y))
 
     def apply_gravity(self, blocks):
         self.velocity_y += GRAVITY
@@ -51,19 +102,27 @@ class Enemy(pygame.sprite.Sprite):
                     self.velocity_y = 0
 
     def move(self, blocks, screen_width):
+        if self.stomped:  # 被踩后不再移动
+            return
+
         # 应用重力
         self.apply_gravity(blocks)
 
         if not self.on_ground:
             return  # 不在地面上时不移动
 
+        # 更新动画帧
+        self.animation_frame = (self.animation_frame + 1) % self.animation_speed
+
         # 尝试水平移动
         old_x = self.rect.x
 
         if self.direction == "left":
             self.rect.x -= self.speed
+            self.current_sprite = self.walk_left
         else:
             self.rect.x += self.speed
+            self.current_sprite = self.walk_right
 
         # 检查与方块的碰撞
         collision = False
@@ -105,16 +164,18 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.right = screen_width
             self.direction = "left"
 
-        # 更新精灵方向
-        self.create_enemy_sprite()
-
     def check_collision_with_player(self, player):
         """检查与玩家的碰撞"""
+        if self.stomped:  # 已经被踩过则忽略
+            return False
+
         # 如果玩家从上方踩下，敌人立即消失
         if (player.rect.bottom < self.rect.centery and
                 player.rect.bottom + player.velocity_y >= self.rect.top and
                 player.rect.right > self.rect.left and
                 player.rect.left < self.rect.right):
             player.velocity_y = -5  # 给玩家一个小反弹
+            self.stomped = True
+            self.current_sprite = self.stomped_sprite  # 显示被踩扁的动画
             return True
         return False
