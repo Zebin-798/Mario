@@ -168,7 +168,6 @@ class Enemy(pygame.sprite.Sprite):
         """检查与玩家的碰撞"""
         if self.stomped:  # 已经被踩过则忽略
             return False
-
         # 如果玩家从上方踩下，敌人立即消失
         if (player.rect.bottom < self.rect.centery and
                 player.rect.bottom + player.velocity_y >= self.rect.top and

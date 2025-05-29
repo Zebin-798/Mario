@@ -6,17 +6,10 @@ from constants import CHARACTER_SCALE
 def flip(sprites):
     """翻转精灵列表，用于角色方向变化"""
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
-
 def load_sprite_sheets(dir1, dir2, width, height, direction=False):
-    """
-    加载并分割精灵表
-    返回包含所有精灵帧的字典
-    """
     path = os.path.join("assets", dir1, dir2)
     images = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-
     all_sprites = {}
-
     for image in images:
         sprite_sheet = pygame.image.load(os.path.join(path, image)).convert_alpha()
         sprites = []

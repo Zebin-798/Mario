@@ -49,9 +49,9 @@ class Player(pygame.sprite.Sprite):
             return None
 
     def update_sprite(self):
-        """更新角色精灵动画（正常状态）"""
+
         if self.is_dead:
-            return  # 死亡状态由专门方法处理
+            return
 
         if not self.on_ground:
             sprite_sheet = "jump"

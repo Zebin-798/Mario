@@ -32,7 +32,7 @@ def main():
     difficulty_level = 1
     SCORE_TO_INCREASE_DIFFICULTY = 10
 
-    # 平台生成函数（保持原代码不变）
+    # 平台生成函数
     def is_overlapping(new_platform, existing_platforms):
         new_x, new_y, new_length = new_platform
         new_rect = pygame.Rect(new_x, new_y, new_length * BLOCK_SIZE, BLOCK_SIZE)
@@ -204,6 +204,7 @@ def main():
             if keys[pygame.K_r]:
                 player.health = 3
                 score = 0
+                player.is_dead = False
                 game_over = False
                 difficulty_level = 1
                 platforms = generate_platforms(5, difficulty_level)
